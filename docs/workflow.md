@@ -1,24 +1,37 @@
-# Personalized AI Tutor – Multi-Agent Workflow
+---
 
-This document captures the end-to-end workflow for the Agentic AI Tutor so we can extend it with future capabilities such as face-to-face doubt sessions and richer multimodal modalities (text ↔ text, speech ↔ text, video guidance, etc.).
+# **workflow.md – Personalized AI Tutor (Updated Architecture)**
 
-## 1. Student Interaction Layer
+This is a **living system architecture** for the Personalized Agentic AI Tutor. It includes text/speech/video modalities, multi-agent reasoning, reinforcement loops, live doubt sessions, and a **Self-Learning Engine** that improves continuously from historical data.
 
-| Channel | Flow | Notes |
-| --- | --- | --- |
-| Text ✍️ | Student types a question/topic → FastAPI `/ask` | Existing Streamlit UI |
-| Speech 🎤 | Student records audio → Voice Activity Detection (VAD) → Speech-to-Text (STT) → text pipeline | Future addition |
-| Face-to-face Doubt Session 🧑‍🏫 | Student joins live session (WebRTC/Video conferencing) → tutor streams explanations + dynamic board | Planned |
+---
 
-All interactions funnel into the central LLM Orchestrator after optional translation or transcription.
+# **1. Student Interaction Layer**
 
-## 2. Multimodal Pre-processing
+| Channel                        | Flow                                            | Notes            |
+| ------------------------------ | ----------------------------------------------- | ---------------- |
+| **Text **                    | Student types in Streamlit UI → FastAPI `/ask`  | Existing feature |
+| **Speech **                  | Audio → VAD → STT → Text → Core Pipeline        | Future roadmap   |
+| **Face-to-Face Session 🧑‍🏫** | WebRTC video/audio → Shared board → Tutor agent | Planned feature  |
 
-1. **STT Service** (Speech-to-Text): Converts spoken questions to text; bypassed when VAD detects silence.
-2. **Translation Layer**: Applies user-preferred language mapping so the tutor works globally.
-3. **Text Normalization**: Ensures topic + subject metadata are extracted for the downstream planner.
+**All inputs (text/speech/video)** eventually reach the **LLM Orchestrator** with optional preprocessing.
 
-## 3. Core Reasoning Loop
+---
+
+# **2. Multimodal Pre-processing**
+
+1. **STT Service (Speech-to-Text)**
+   Converts voice queries to text; bypassed when silence is detected.
+
+2. **Translation Layer**
+   Auto-translates input into the tutor’s working language.
+
+3. **Text Normalization**
+   Extracts topic, subject, intent, and difficulty metadata for downstream agents.
+
+---
+
+# **3. Core Reasoning Loop (Updated)**
 
 ```mermaid
 flowchart LR
@@ -32,54 +45,153 @@ flowchart LR
   AdaptiveAgent --> FeedbackAgent
   FeedbackAgent --> Student
   PracticeSet --> Student
+  Student --> History((Interaction History))
+  History --> SelfLearning((Self-Learning Agent))
+  SelfLearning --> Planner
+  SelfLearning --> AdaptiveAgent
+  SelfLearning --> Retriever
+  SelfLearning --> QuizGen
 ```
 
-- **Planner Agent**: infers/validates topic, subject, and difficulty from either explicit metadata or question text.
-- **Adaptive Learning Agent**: selects current concept, references conversation history, and orchestrates other agents.
-- **Retriever Agent**: fetches curated or auto-generated topic briefs (RAG or fallback generator).
-- **Quiz Generator**: builds adaptive practice sets (text, numerical, or scenario-based). Future: add diagram/video prompts.
-- **Feedback Agent**: explains why certain topics/questions were chosen and suggests next steps.
+### **Agents**
 
-## 4. Teaching Content Orchestration
+### **Planner Agent**
 
-| Component | Responsibility |
-| --- | --- |
-| **Pedagogical Agent** | Aligns with curriculum, ensures spiral progression, updates teaching context once a concept is “finished.” |
-| **Teaching Content Orchestrator** | Traverses subject → chapter → section → concept hierarchy; schedules upcoming modules. |
-| **Education Content Store** | Structured knowledge base with metadata for sections, micro-concepts, and evaluation criteria. |
+* Identifies: subject, topic, difficulty, learning goal.
+* Uses rules + historical patterns.
 
-## 5. Engagement & Reinforcement Loop
+### **Adaptive Learning Agent**
 
-1. **Engagement Agent**: monitors interaction metrics (time-on-task, question frequency).
-2. **Reinforcement Agent**: issues motivational nudges or gamified rewards.
-3. **Assessment Agent**: evaluates quizzes/tests, updates student skill profile, writes to progress DB.
-4. **Feedback Loop**: adaptive agent ingests new scores + preferences → next session plan.
+* Chooses the right concept to explain.
+* Uses past conversations + self-learning data.
 
-## 6. Face-to-Face + Text-to-Text Doubt Session Add-on
+### **Retriever Agent**
 
-### 6.1 Live Doubt Session
+* Pulls curated notes, topic briefs, examples (RAG).
+* Falls back to generator if missing.
 
-- Launch **Face-to-Face Session Agent** (WebRTC):
-  - Streams student video/audio.
-  - Provides shared whiteboard for the tutor AI to annotate in real-time.
-  - Integrates STT/TTS for accessibility and transcripts.
-- Session transcripts feed back into conversation history for context continuity.
+### **Quiz Generator**
 
-### 6.2 Text-to-Text Mode
+* Creates adaptive quizzes:
 
-- Dedicated **Doubt Resolution agent**:
-  - Accepts snippet of student work or question.
-  - Cross-references context evaluator to avoid repeated answers.
-  - Summarizes conversation threads and highlights unresolved points.
+  * text questions
+  * numericals
+  * logical reasoning
+  * future: diagrams/videos
 
-## 7. Future Enhancements
+### **Feedback Agent**
 
-- Plug in specialized video agents to generate micro-lectures per concept.
-- Deploy Support AI Agent for escalation to human mentors.
-- Add evaluation dashboards for teachers/parents with weekly reports.
-- Integrate classroom mode: multiple students per session, with personalized follow-ups.
+* Explains reasoning behind chosen content.
+* Suggests next learning path.
 
 ---
 
-**Status:** living document – update this file whenever new modalities or agents are introduced, ensuring architectural alignment with the reference diagram.***
+# **4. Self-Learning Engine (New Feature)**
+
+A continuous learning system that updates the tutor’s teaching strategy using previous data.
+
+### **What It Learns**
+
+* Student weaknesses per **subject**, **topic**, **micro-concept**
+* Common mistakes per **question type**
+* Which explanations were effective
+* Preferred explanation style
+* Student pace & attention patterns
+* Difficulty level adaptation curve
+
+### **What It Updates**
+
+* Planner → more accurate difficulty estimation
+* AdaptiveAgent → improved concept sequencing
+* Retriever → prioritizes content that helped earlier
+* QuizGen → questions mapped to weak areas
+* Feedback → tailored improvement tips
+
+### **Stored Data**
+
+* Past queries
+* Correct/incorrect answers
+* Time spent on each step
+* Doubts raised
+* Session transcripts
+* Performance graphs
+
+### **Outputs**
+
+* Learner Profile Embedding
+* Concept Mastery Map
+* Difficulty Progression Curve
+* Pedagogical Preference Model
+
+---
+
+# **5. Teaching Content Orchestration**
+
+| Component                   | Role                                                                  |
+| --------------------------- | --------------------------------------------------------------------- |
+| **Pedagogical Agent**       | Ensures structured learning (curriculum → chapter → concept).         |
+| **Content Orchestrator**    | Schedules topics, revisits weak concepts, handles spiral progression. |
+| **Education Content Store** | Stores sections, micro-concepts, examples, diagrams, test cases.      |
+
+### **Self-Learning Integration**
+
+* Topics selected based on weakness matrix
+* Explanations optimized for student's past learning response
+* Automatically slows down or speeds up instruction
+
+---
+
+# **6. Engagement & Reinforcement Loop**
+
+1. **Engagement Agent**
+
+   * Tracks time-on-task, confusion points, drop-off moments.
+
+2. **Reinforcement Agent**
+
+   * Sends nudges, motivation, gamified rewards.
+   * Customizes tone and intensity using self-learning signals.
+
+3. **Assessment Agent**
+
+   * Grades quizzes/tests.
+   * Generates mastery scores and performance vectors.
+
+4. **Feedback Loop**
+
+   * AdaptiveAgent uses new data → next session planning.
+   * Self-Learning Engine updates learner profile continuously.
+
+---
+
+# **7. Face-to-Face + Text-to-Text Doubt Sessions**
+
+## **7.1 Live Doubt Session (WebRTC)**
+
+* Two-way video/audio streaming
+* AI tutor draws on shared whiteboard
+* STT + TTS integrated
+* Real-time transcript stored → Self-Learning Engine
+
+## **7.2 Text Doubt Resolution**
+
+* Snippet-based question solving
+* Context evaluator avoids repetition
+* Highlights unresolved doubts
+* Summarizes entire doubt conversation
+
+---
+
+# **8. Future Enhancements**
+
+* Automated micro-lecture video generator
+* Human mentor escalation agent
+* Parent/teacher analytics dashboards
+* Classroom mode (multi-student sessions)
+* Student motivation model using RL
+* Auto-difficulty progression via predictive modeling
+
+---
+
+
 
